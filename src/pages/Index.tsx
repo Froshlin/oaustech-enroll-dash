@@ -75,7 +75,7 @@ const Index = () => {
           </h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
             Streamlined digital platform for managing all your registration documents 
-            and admission requirements at Oke-Ogun Polytechnic Saki.
+            and admission requirements at OAUSTECH.
           </p>
         </div>
 

@@ -5,19 +5,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Shield, ArrowLeft, Eye, EyeOff } from "lucide-react";
+import { Shield, ArrowLeft } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import axios from "axios";
 
-const AdminLogin = () => {
+const AdminRegister = () => {
   const navigate = useNavigate();
-  const { login, isLoading } = useAuth();
+  const { login } = useAuth(); // Reuse login to set user after registration
   const { toast } = useToast();
   const [formData, setFormData] = useState({
     username: '', // Admin email
-    password: ''
+    password: '',
   });
-  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -29,16 +29,28 @@ const AdminLogin = () => {
       return;
     }
 
-    const success = await login(formData.username, formData.password, 'admin');
-    
-    if (success) {
-      toast({
-        title: "Login Successful",
-        description: "Welcome to the admin dashboard!"
+    try {
+      const response = await axios.post(`${import.meta.env.VITE_PUBLIC_BACKEND_URL}/api/auth/register`, {
+        username: formData.username,
+        password: formData.password,
+        role: 'admin',
       });
-      navigate('/admin-dashboard');
-    } else {
-      setError('Invalid admin email or password. Please try again.'); // Updated for clarity
+
+      const { token, _id, username, role } = response.data;
+      // Store token and user data
+      localStorage.setItem('token', token);
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      const userData = { id: _id, username, role, name: '' };
+      localStorage.setItem('oaustech_user', JSON.stringify(userData));
+      await login(username, formData.password, 'admin'); // Log in after registration
+
+      toast({
+        title: "Registration Successful",
+        description: "You are now registered and logged in!"
+      });
+      navigate('/admin-login');
+    } catch (error) {
+      setError(error.response?.data?.message || 'Registration failed. Please try again.');
     }
   };
 
@@ -53,31 +65,29 @@ const AdminLogin = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-accent/5 via-background to-primary/5 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        {/* Header */}
         <div className="text-center mb-8">
           <Button
             variant="ghost"
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/admin-login')}
             className="mb-4 text-muted-foreground hover:text-foreground"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Home
+            Back to Login
           </Button>
           <div className="flex items-center justify-center gap-3 mb-4">
             <Shield className="w-8 h-8 text-accent" />
             <div>
               <h1 className="text-xl font-bold">OAUSTECH</h1>
-              <p className="text-sm text-muted-foreground">Admin Portal</p>
+              <p className="text-sm text-muted-foreground">Admin Registration</p>
             </div>
           </div>
         </div>
 
-        {/* Login Card */}
         <Card className="shadow-xl border-2 border-accent/20">
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl">Admin Login</CardTitle>
+            <CardTitle className="text-2xl">Admin Registration</CardTitle>
             <CardDescription>
-              Administrative access to manage student registrations
+              Create an admin account to manage student registrations
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -103,49 +113,24 @@ const AdminLogin = () => {
               
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    name="password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Enter admin password"
-                    value={formData.password}
-                    onChange={handleChange}
-                    className="w-full pr-10"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </Button>
-                </div>
+                <Input
+                  id="password"
+                  name="password"
+                  type="password"
+                  placeholder="Enter admin password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  className="w-full"
+                />
               </div>
 
               <Button
                 type="submit"
                 className="w-full py-6 bg-accent hover:bg-accent/90"
-                disabled={isLoading}
               >
-                {isLoading ? 'Signing In...' : 'Admin Sign In'}
+                Register
               </Button>
             </form>
-
-            <div className="mt-4 text-center">
-              <p className="text-sm text-muted-foreground">
-                You don't have an account?.{" "}
-                <Button
-                  variant="link"
-                  className="p-0 text-primary hover:underline"
-                  onClick={() => navigate('/admin-register')}
-                >
-                  Register here
-                </Button>
-              </p>
-            </div>
           </CardContent>
         </Card>
       </div>
@@ -153,4 +138,4 @@ const AdminLogin = () => {
   );
 };
 
-export default AdminLogin;
+export default AdminRegister;

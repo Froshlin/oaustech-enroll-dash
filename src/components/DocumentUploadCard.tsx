@@ -1,4 +1,5 @@
-import { useState } from "react";
+// src/components/DocumentUploadCard.tsx
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,24 +17,44 @@ import {
 } from "lucide-react";
 import { DocumentType } from "@/types/documents";
 import { useToast } from "@/hooks/use-toast";
+import axios from "axios";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface DocumentUploadCardProps {
   document: DocumentType;
   status: string;
   onStatusChange: (status: string) => void;
+  showUpload: boolean;
 }
 
-const DocumentUploadCard = ({ document, status, onStatusChange }: DocumentUploadCardProps) => {
+const DocumentUploadCard: React.FC<DocumentUploadCardProps> = ({ document, status, onStatusChange, showUpload }) => {
+  const { user } = useAuth();
   const { toast } = useToast();
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [fileUrl, setFileUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (status === 'uploaded' || status === 'approved' || status === 'reviewing') {
+      axios.get(`${import.meta.env.VITE_PUBLIC_BACKEND_URL}/api/students/${user?.id}/documents`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+      }).then((response) => {
+        const doc = response.data.find((d: any) => d.documentType === document.id);
+        if (doc) {
+          setFileUrl(doc.fileUrl);
+          if (doc.status !== status) {
+            onStatusChange(doc.status); // Sync with server status
+          }
+        }
+      }).catch((error) => console.error('Error fetching file URL:', error));
+    }
+  }, [status, user?.id, document.id, onStatusChange]);
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) return;
+    if (!file || !user) return;
 
-    // Validate file type
     const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
     if (!allowedTypes.includes(file.type)) {
       toast({
@@ -44,7 +65,6 @@ const DocumentUploadCard = ({ document, status, onStatusChange }: DocumentUpload
       return;
     }
 
-    // Validate file size (max 10MB)
     if (file.size > 10 * 1024 * 1024) {
       toast({
         title: "File Too Large",
@@ -57,76 +77,89 @@ const DocumentUploadCard = ({ document, status, onStatusChange }: DocumentUpload
     setIsUploading(true);
     setUploadProgress(0);
 
-    // Simulate upload progress
-    const interval = setInterval(() => {
-      setUploadProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setIsUploading(false);
-          setUploadedFile(file);
-          onStatusChange('uploaded');
-          toast({
-            title: "Upload Successful",
-            description: `${document.name} has been uploaded successfully.`
-          });
-          return 100;
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('documentType', document.id);
+
+    try {
+      const response = await axios.post(
+        `${import.meta.env.VITE_PUBLIC_BACKEND_URL}/api/students/${user.id}/documents`,
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'multipart/form-data',
+          },
+          onUploadProgress: (progressEvent) => {
+            const percentCompleted = Math.round((progressEvent.loaded * 100) / (progressEvent.total || 1));
+            setUploadProgress(percentCompleted);
+          },
         }
-        return prev + 10;
+      );
+      setUploadedFile(file);
+      setFileUrl(response.data.fileUrl);
+      onStatusChange('uploaded');
+      toast({
+        title: "Upload Successful",
+        description: `${document.name} has been uploaded successfully.`,
       });
-    }, 200);
+    } catch (error) {
+      console.error('Upload error:', error.response?.data || error.message);
+      toast({
+        title: "Upload Failed",
+        description: error.response?.data?.message || "Failed to upload the document. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleRemoveFile = () => {
-    setUploadedFile(null);
-    setUploadProgress(0);
-    onStatusChange('pending');
-    toast({
-      title: "File Removed",
-      description: `${document.name} has been removed.`
-    });
+    if (uploadedFile) {
+      setUploadedFile(null);
+      setFileUrl(null);
+      setUploadProgress(0);
+      onStatusChange('pending');
+      toast({
+        title: "File Removed",
+        description: `${document.name} has been removed locally. (Backend delete not implemented yet.)`
+      });
+    }
   };
 
   const getStatusIcon = () => {
     switch (status) {
-      case 'approved': return <CheckCircle className="w-5 h-5 text-success" />;
+      case 'approved': return <CheckCircle className="w-5 h-5 text-green-500" />;
       case 'uploaded': 
-      case 'reviewing': return <Clock className="w-5 h-5 text-warning" />;
-      case 'rejected': return <AlertCircle className="w-5 h-5 text-destructive" />;
-      default: return <FileText className="w-5 h-5 text-muted-foreground" />;
+      case 'reviewing': return <Clock className="w-5 h-5 text-yellow-500" />;
+      case 'rejected': return <AlertCircle className="w-5 h-5 text-red-500" />;
+      default: return <FileText className="w-5 h-5 text-gray-500" />;
     }
   };
 
   const getStatusBadge = () => {
-    const variants = {
+    const variants: Record<string, "default" | "destructive" | "secondary" | "outline"> = {
       'approved': 'default',
       'uploaded': 'secondary',
       'reviewing': 'outline',
       'rejected': 'destructive',
       'pending': 'outline'
     };
-
-    const colors = {
-      'approved': 'bg-success text-success-foreground',
-      'uploaded': 'bg-primary text-primary-foreground',
-      'reviewing': 'bg-warning text-warning-foreground',
-      'rejected': 'bg-destructive text-destructive-foreground',
-      'pending': 'bg-muted text-muted-foreground'
-    };
-
     return (
-      <Badge className={colors[status as keyof typeof colors]}>
+      <Badge variant={variants[status] ?? 'outline'}>
         {status.charAt(0).toUpperCase() + status.slice(1)}
       </Badge>
     );
   };
 
   const canUpload = status === 'pending' || status === 'rejected';
-  const hasFile = uploadedFile || status === 'uploaded' || status === 'approved' || status === 'reviewing';
+  const hasFile = !!fileUrl || (uploadedFile && ['uploaded', 'approved', 'reviewing'].includes(status));
 
   return (
     <Card className={`transition-all duration-200 ${
-      status === 'approved' ? 'border-success/50 bg-success/5' :
-      status === 'rejected' ? 'border-destructive/50 bg-destructive/5' :
+      status === 'approved' ? 'border-green-500/50 bg-green-500/5' :
+      status === 'rejected' ? 'border-red-500/50 bg-red-500/5' :
       'hover:shadow-md'
     }`}>
       <CardHeader className="pb-3">
@@ -139,7 +172,7 @@ const DocumentUploadCard = ({ document, status, onStatusChange }: DocumentUpload
                 {document.description}
               </CardDescription>
               {document.copies.colored > 0 && (
-                <div className="text-xs text-muted-foreground mt-2">
+                <div className="text-xs text-gray-500 mt-2">
                   Required: {document.copies.colored} colored print
                   {document.copies.photocopies > 0 && `, ${document.copies.photocopies} photocopies`}
                 </div>
@@ -152,7 +185,7 @@ const DocumentUploadCard = ({ document, status, onStatusChange }: DocumentUpload
 
       <CardContent className="pt-0">
         {status === 'rejected' && (
-          <Alert className="mb-4 border-destructive/50 bg-destructive/5">
+          <Alert className="mb-4 border-red-500/50 bg-red-500/5">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
               This document was rejected. Please upload a corrected version.
@@ -163,7 +196,7 @@ const DocumentUploadCard = ({ document, status, onStatusChange }: DocumentUpload
         {isUploading && (
           <div className="mb-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-muted-foreground">Uploading...</span>
+              <span className="text-sm text-gray-500">Uploading...</span>
               <span className="text-sm font-medium">{uploadProgress}%</span>
             </div>
             <Progress value={uploadProgress} className="h-2" />
@@ -171,7 +204,7 @@ const DocumentUploadCard = ({ document, status, onStatusChange }: DocumentUpload
         )}
 
         <div className="flex items-center gap-2">
-          {canUpload && !isUploading && (
+          {showUpload && canUpload && !isUploading && (
             <>
               <input
                 type="file"
@@ -191,13 +224,13 @@ const DocumentUploadCard = ({ document, status, onStatusChange }: DocumentUpload
             </>
           )}
 
-          {hasFile && !isUploading && (
+          {hasFile && !isUploading && fileUrl && (
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={() => window.open(fileUrl, '_blank')}>
                 <Eye className="w-4 h-4 mr-2" />
                 View
               </Button>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={() => window.open(fileUrl, '_blank')}>
                 <Download className="w-4 h-4 mr-2" />
                 Download
               </Button>
@@ -211,14 +244,14 @@ const DocumentUploadCard = ({ document, status, onStatusChange }: DocumentUpload
           )}
 
           {uploadedFile && (
-            <div className="text-sm text-muted-foreground ml-auto">
+            <div className="text-sm text-gray-500 ml-auto">
               {uploadedFile.name} ({(uploadedFile.size / 1024 / 1024).toFixed(2)} MB)
             </div>
           )}
         </div>
 
         {status === 'approved' && (
-          <div className="mt-3 text-sm text-success">
+          <div className="mt-3 text-sm text-green-500">
             ✓ Document approved and verified
           </div>
         )}

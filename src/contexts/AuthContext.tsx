@@ -1,8 +1,10 @@
+// contexts/AuthContext.tsx
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import axios from 'axios';
 
 export interface User {
   id: string;
-  email: string;
+  username: string;
   name: string;
   role: 'student' | 'admin';
   studentId?: string;
@@ -12,76 +14,82 @@ export interface User {
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string, role: 'student' | 'admin') => Promise<boolean>;
+  login: (username: string, password: string, role: 'student' | 'admin') => Promise<boolean>;
   logout: () => void;
   isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Mock user data for demo purposes
-const mockUsers = {
-  students: [
-    {
-      id: '1',
-      email: 'student@oaustech.edu.ng',
-      password: 'student123',
-      name: 'John Doe',
-      role: 'student' as const,
-      studentId: 'OAUS/2024/001',
-      department: 'Computer Science',
-      level: '100'
-    }
-  ],
-  admins: [
-    {
-      id: '2',
-      email: 'admin@oaustech.edu.ng',
-      password: 'admin123',
-      name: 'Dr. Jane Smith',
-      role: 'admin' as const,
-      department: 'Registry'
-    }
-  ]
-};
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check for stored user session
     const storedUser = localStorage.getItem('oaustech_user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
+    const token = localStorage.getItem('token');
+    if (storedUser && token) {
+      const parsedUser = JSON.parse(storedUser);
+      setUser(parsedUser);
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      // Clear any existing timeout on refresh
+      const timeoutId = localStorage.getItem('logoutTimeoutId');
+      if (timeoutId) {
+        clearTimeout(parseInt(timeoutId));
+      }
+      // Set new 1-hour timeout
+      const newTimeoutId = setTimeout(logout, 3600000);
+      localStorage.setItem('logoutTimeoutId', newTimeoutId.toString());
     }
     setIsLoading(false);
   }, []);
 
-  const login = async (email: string, password: string, role: 'student' | 'admin'): Promise<boolean> => {
+  const login = async (username: string, password: string, role: 'student' | 'admin'): Promise<boolean> => {
     setIsLoading(true);
-    
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const userList = role === 'student' ? mockUsers.students : mockUsers.admins;
-    const foundUser = userList.find(u => u.email === email && u.password === password);
-    
-    if (foundUser) {
-      const { password: _, ...userWithoutPassword } = foundUser;
-      setUser(userWithoutPassword);
-      localStorage.setItem('oaustech_user', JSON.stringify(userWithoutPassword));
+    try {
+      const response = await axios.post(`${import.meta.env.VITE_PUBLIC_BACKEND_URL}/api/auth/login`, {
+        username,
+        password,
+      });
+
+      const { _id, username: userUsername, role: userRole, token } = response.data;
+      const userData: User = {
+        id: _id,
+        username: userUsername,
+        name: '',
+        role: userRole,
+        studentId: role === 'student' ? username : undefined,
+        department: '',
+        level: '',
+      };
+
+      setUser(userData);
+      localStorage.setItem('oaustech_user', JSON.stringify(userData));
+      localStorage.setItem('token', token);
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
+      const timeoutId = setTimeout(logout, 3600000);
+      localStorage.setItem('logoutTimeoutId', timeoutId.toString());
+
       setIsLoading(false);
       return true;
+    } catch (error) {
+      console.error('Login failed:', error);
+      setIsLoading(false);
+      return false;
     }
-    
-    setIsLoading(false);
-    return false;
   };
 
   const logout = () => {
     setUser(null);
     localStorage.removeItem('oaustech_user');
+    localStorage.removeItem('token');
+    const timeoutId = localStorage.getItem('logoutTimeoutId');
+    if (timeoutId) {
+      clearTimeout(parseInt(timeoutId));
+      localStorage.removeItem('logoutTimeoutId');
+    }
+    delete axios.defaults.headers.common['Authorization'];
   };
 
   return (

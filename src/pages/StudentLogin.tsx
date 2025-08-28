@@ -14,7 +14,7 @@ const StudentLogin = () => {
   const { login, isLoading } = useAuth();
   const { toast } = useToast();
   const [formData, setFormData] = useState({
-    email: '',
+    username: '', // Matric No.
     password: ''
   });
   const [showPassword, setShowPassword] = useState(false);
@@ -24,12 +24,12 @@ const StudentLogin = () => {
     e.preventDefault();
     setError('');
 
-    if (!formData.email || !formData.password) {
+    if (!formData.username || !formData.password) {
       setError('Please fill in all fields');
       return;
     }
 
-    const success = await login(formData.email, formData.password, 'student');
+    const success = await login(formData.username, formData.password, 'student');
     
     if (success) {
       toast({
@@ -38,7 +38,7 @@ const StudentLogin = () => {
       });
       navigate('/student-dashboard');
     } else {
-      setError('Invalid email or password. Please try again.');
+      setError('Invalid Matric No. or password. Please try again.');
     }
   };
 
@@ -54,13 +54,13 @@ const StudentLogin = () => {
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Header */}
-        <div className="text-center mb-8">
+        <div className="mb-8">
           <Button
             variant="ghost"
             onClick={() => navigate('/')}
-            className="mb-4 text-muted-foreground hover:text-foreground"
+            className="mb-4 bg-transparent hover:bg-transparent text-muted-foreground"
           >
-            <ArrowLeft className="w-4 h-4 mr-2" />
+            <ArrowLeft className="w-2 h-4" />
             Back to Home
           </Button>
           <div className="flex items-center justify-center gap-3 mb-4">
@@ -89,13 +89,13 @@ const StudentLogin = () => {
             
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email Address</Label>
+                <Label htmlFor="username">Matric No.</Label>
                 <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  placeholder="student@oaustech.edu.ng"
-                  value={formData.email}
+                  id="username"
+                  name="username"
+                  type="text"
+                  placeholder="e.g., STU/2023/001"
+                  value={formData.username}
                   onChange={handleChange}
                   className="w-full"
                 />
@@ -133,15 +133,6 @@ const StudentLogin = () => {
                 {isLoading ? 'Signing In...' : 'Sign In'}
               </Button>
             </form>
-
-            {/* Demo Credentials */}
-            <div className="mt-6 p-4 bg-muted/50 rounded-lg">
-              <p className="text-sm font-medium text-muted-foreground mb-2">Demo Credentials:</p>
-              <div className="text-xs space-y-1">
-                <p><strong>Email:</strong> student@oaustech.edu.ng</p>
-                <p><strong>Password:</strong> student123</p>
-              </div>
-            </div>
 
             <div className="mt-4 text-center">
               <p className="text-sm text-muted-foreground">
