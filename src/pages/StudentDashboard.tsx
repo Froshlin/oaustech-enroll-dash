@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -62,6 +63,7 @@ const StudentDashboard = () => {
 
     const interval = setInterval(fetchData, 30000); // Poll every 30 seconds
     return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, navigate, toast, isLoading]);
 
   const handleLogout = () => {

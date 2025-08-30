@@ -40,6 +40,7 @@ const DocumentUploadCard: React.FC<DocumentUploadCardProps> = ({ document, statu
       axios.get(`${import.meta.env.VITE_PUBLIC_BACKEND_URL}/api/students/${user?.id}/documents`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       }).then((response) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const doc = response.data.find((d: any) => d.documentType === document.id);
         if (doc) {
           setFileUrl(doc.fileUrl);

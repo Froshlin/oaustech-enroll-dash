@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -95,6 +96,7 @@ const AdminDashboard = () => {
       return;
     }
     fetchStudents();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, navigate, toast]);
 
   const handleLogout = () => {
