@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { GraduationCap, Users, Shield, FileText, ChevronRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import logo from "@/assets/oaustech-sch-logo.png";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -50,7 +51,7 @@ const Index = () => {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <GraduationCap className="w-8 h-8 text-primary" />
+              <img src={logo} alt="OAUSTECH Logo" className="w-10 h-10 object-contain" />
               <div>
                 <h1 className="text-xl font-bold text-foreground">OAUSTECH</h1>
                 <p className="text-sm text-muted-foreground">Student Registration Portal</p>
