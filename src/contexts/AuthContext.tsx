@@ -25,6 +25,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const logout = () => {
+    setUser(null);
+    localStorage.removeItem('oaustech_user');
+    localStorage.removeItem('token');
+    const timeoutId = localStorage.getItem('logoutTimeoutId');
+    if (timeoutId) {
+      clearTimeout(parseInt(timeoutId));
+      localStorage.removeItem('logoutTimeoutId');
+    }
+    delete axios.defaults.headers.common['Authorization'];
+  };
+
   useEffect(() => {
     const storedUser = localStorage.getItem('oaustech_user');
     const token = localStorage.getItem('token');
@@ -78,18 +90,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsLoading(false);
       return false;
     }
-  };
-
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('oaustech_user');
-    localStorage.removeItem('token');
-    const timeoutId = localStorage.getItem('logoutTimeoutId');
-    if (timeoutId) {
-      clearTimeout(parseInt(timeoutId));
-      localStorage.removeItem('logoutTimeoutId');
-    }
-    delete axios.defaults.headers.common['Authorization'];
   };
 
   return (

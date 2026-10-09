@@ -105,15 +105,16 @@ const StudentDashboard = () => {
 
   const uploadedCount = documents.length;
   const approvedCount = documents.filter(doc => doc.status === 'approved').length;
-  const reviewingCount = documents.filter(doc => ['pending', 'uploaded', 'reviewing'].includes(doc.status) && doc.status !== 'approved').length; // Exclude approved
+  const reviewingCount = documents.filter(doc => ['pending', 'uploaded', 'reviewing'].includes(doc.status) && doc.status !== 'approved').length;
   const rejectedCount = documents.filter(doc => doc.status === 'rejected').length;
   const uploadProgress = TOTAL_REQUIRED_DOCUMENTS > 0 ? (uploadedCount / TOTAL_REQUIRED_DOCUMENTS) * 100 : 0;
   const approvalProgress = TOTAL_REQUIRED_DOCUMENTS > 0 ? (approvedCount / TOTAL_REQUIRED_DOCUMENTS) * 100 : 0;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5">
+    <div className="min-h-screen bg-linear-to-br from-primary/5 via-background to-accent/5">
       <header className="border-b bg-background/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
+
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <img src={Logo} alt="OAUSTECH Logo" className="w-10 h-10 object-contain" />
